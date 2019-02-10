@@ -3,8 +3,53 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.examples.tutorials.mnist import input_data
+import os, time
 
+from keras.preprocessing.image import load_img
+from keras.preprocessing.image import img_to_array
+from keras.backend.tensorflow_backend import set_session
 mnist=input_data.read_data_sets("MNIST_data")
+
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.95
+config.gpu_options.visible_device_list = "1" 
+set_session(tf.Session(config=config))   
+
+dir_data = "data/pokeData/"
+Ntrain = 250
+Ntest = 100
+nm_imgs = np.sort(os.listdir(dir_data))
+## name of the jpg files for training set
+nm_imgs_train = nm_imgs[:Ntrain]
+nm_imgs_test = nm_imgs[Ntrain:Ntrain + Ntest]
+img_shape = (32, 32, 3)
+
+def get_npdata(nm_imgs_train):
+    X_train = []
+    for i, myid in enumerate(nm_imgs_train):
+        image = load_img(dir_data + "/" + myid,
+                         target_size=img_shape[:2])
+        image = img_to_array(image)/255.0
+        X_train.append(image)
+    X_train = np.array(X_train)
+    return(X_train)
+
+X_train = get_npdata(nm_imgs_train)
+print("X_train.shape = {}".format(X_train.shape))
+
+X_test  = get_npdata(nm_imgs_test)
+print("X_test.shape = {}".format(X_test.shape))
+
+
+fig = plt.figure(figsize=(30,10))
+nplot = 7
+for count in range(1,nplot):
+    ax = fig.add_subplot(1,nplot,count)
+    ax.imshow(X_train[count])
+plt.show()
+
+
 
 def generator(z,reuse=None):
     with tf.variable_scope('gen',reuse=reuse):
@@ -77,8 +122,26 @@ with tf.Session() as sess:
         
         samples.append(gen_sample)
 
-plt.imshow(samples[0].reshape(28,28))
+Nr = 10
+Nc = 10
+cmap = "spring"
 
-plt.imshow(samples[99].reshape(28,28))
+fig, axs = plt.subplots(Nr, Nc)
+fig.suptitle('Multiple images')
+
+count = 0
+for i in range(Nr):
+    for j in range(Nc):
+        if count < 100:
+                img = samples[count].reshape(28,28)
+                print("image done")
+                axspoint = axs[i, j].imshow(img, cmap=cmap)
+                print("image plotted")
+                count += 1
 
 
+
+fig.savefig('figs/numbers.png')
+plt.show()
+
+#my_path = os.path.abspath(__file__)
