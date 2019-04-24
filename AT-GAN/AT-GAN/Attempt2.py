@@ -12,21 +12,14 @@ from keras.optimizers import Adam
 from tensorflow.python.client import device_lib
 print(device_lib.list_local_devices())
 
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
-config = tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.95
-config.gpu_options.visible_device_list = "1" 
-set_session(tf.Session(config=config))   
-
-
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
-config = tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.95
-config.gpu_options.visible_device_list = "1" 
-set_session(tf.Session(config=config))   
+#os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
+#config = tf.ConfigProto()
+#config.gpu_options.per_process_gpu_memory_fraction = 0.95
+#config.gpu_options.visible_device_list = "1" 
+#set_session(tf.Session(config=config))   
 
 dir_data = "data/pokeData/"
-Ntrain = 721
+Ntrain = 819
 Ntest = 100
 nm_imgs = np.sort(os.listdir(dir_data))
 ## name of the jpg files for training set
@@ -128,7 +121,6 @@ def discriminator_gan(img_shape,noutput=1):
     x = layers.BatchNormalization()(x)
     x = layers.Dropout(0.2)(x)
     x = layers.Conv2D(32, (3, 3), activation='relu', padding='same', name='block1_conv2')(x)
-    #x = layers.normalization()(x)
     x = layers.MaxPooling2D((2, 2), strides=(2, 2), name='block1_pool')(x)
     
     x = layers.Conv2D(64, (3, 3), activation='relu', padding='same', name='block2_conv1')(x)
@@ -173,7 +165,7 @@ combined = models.Model(z, valid)
 combined.compile(loss='binary_crossentropy', optimizer=optimizer)
 combined.summary()
 
-def train(models, training_data, noise_plot, dir_result="/result/", epochs=10000, batch_size=128):
+def train(models, training_data, noise_plot, dir_result="/result/", epochs=20000, batch_size=100):
         '''
         models     : tuple containins three tensors, (combined, discriminator, generator_gan)
         training_data    : np.array containing images (Nsample, height, width, Nchannels)
@@ -238,7 +230,7 @@ def train(models, training_data, noise_plot, dir_result="/result/", epochs=10000
                         
         return(history)
 
-dir_result="./result_GAN9/"
+dir_result="./result_GAN13/"
 
 try:
     os.mkdir(dir_result)
@@ -249,7 +241,7 @@ start_time = time.time()
 
 _models = combined, discriminator, generator_gan          
 
-history = train(_models, training_data, noise, dir_result=dir_result,epochs=20000, batch_size=720)
+history = train(_models, training_data, noise, dir_result=dir_result,epochs=20000, batch_size=100)
 end_time = time.time()
 print("-"*10)
 print("Time took: {:4.2f} min".format((end_time - start_time)/60))
