@@ -19,7 +19,7 @@ print(device_lib.list_local_devices())
 #set_session(tf.Session(config=config))   
 
 dir_data = "data/pokeData/"
-Ntrain = 819
+Ntrain = 745
 Ntest = 100
 nm_imgs = np.sort(os.listdir(dir_data))
 ## name of the jpg files for training set
