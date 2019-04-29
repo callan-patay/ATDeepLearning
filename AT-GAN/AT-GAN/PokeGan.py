@@ -22,7 +22,6 @@ dir_data = "data/pokeData/"
 Ntrain = 745
 Ntest = 100
 nm_imgs = np.sort(os.listdir(dir_data))
-## name of the jpg files for training set
 nm_imgs_train = nm_imgs[:Ntrain]
 nm_imgs_test = nm_imgs[Ntrain:Ntrain + Ntest]
 img_shape = (32, 32, 3)
@@ -69,8 +68,6 @@ def build_generator_gan(img_shape, noise_shape = (100,)):
     d = layers.Dropout(0.2)(d)
     d = layers.Conv2DTranspose(128, kernel_size=(2,2) ,  strides=(2,2) , use_bias=False)(d)
     d = layers.Conv2D( 64  , ( 1 , 1 ) , activation='relu' , padding='same', name="block_4")(d) ## 16,16
-
-
     d = layers.Conv2DTranspose(32, kernel_size=(2,2) ,  strides=(2,2) , use_bias=False)(d)
     d = layers.Conv2D( 64  , ( 1 , 1 ) , activation='relu' , padding='same', name="block_5")(d) ## 32,32
     
@@ -106,13 +103,9 @@ def plot_generated_images(noise,path_save=None,titleadd=""):
         plt.savefig(path_save,
                     bbox_inches='tight',
                     pad_inches=0)
-        #plt.close()
-    #else:
-       # plt.show()
 
 nsample = 4
 noise = get_noise(nsample=nsample, nlatent_dim=noise_shape[0])
-#plot_generated_images(noise)
 
 def discriminator_gan(img_shape,noutput=1):
     input_img = layers.Input(shape=img_shape)
@@ -159,8 +152,7 @@ discriminator.trainable = False
 # The valid takes generated images as input and determines validity
 valid = discriminator(img)
 
-# The combined model  (stacked generator_gan and discriminator) takes
-# noise as input => generates images => determines validity 
+
 combined = models.Model(z, valid)
 combined.compile(loss='binary_crossentropy', optimizer=optimizer)
 combined.summary()
@@ -179,9 +171,6 @@ def train(models, training_data, noise_plot, dir_result="/result/", epochs=20000
         history = []
         for epoch in range(epochs):
 
-            # ---------------------
-            #  Train Discriminator
-            # ---------------------
 
             # Select a random half batch of images
             idx = np.random.randint(0, training_data.shape[0], half_batch)
@@ -192,15 +181,11 @@ def train(models, training_data, noise_plot, dir_result="/result/", epochs=20000
             gen_imgs = generator_gan.predict(noise)
 
             
-            # Train the discriminator q: better to mix them together?
+            # Train the discriminator
             d_loss_real = discriminator.train_on_batch(imgs, np.ones((half_batch, 1)))
             d_loss_fake = discriminator.train_on_batch(gen_imgs, np.zeros((half_batch, 1)))
             d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
 
-
-            # ---------------------
-            #  Train generator_gan
-            # ---------------------
 
             noise = get_noise(batch_size, nlatent_dim)
 
