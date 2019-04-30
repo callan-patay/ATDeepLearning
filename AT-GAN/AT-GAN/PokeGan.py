@@ -3,7 +3,7 @@ import os, time
 import numpy as np 
 from keras.preprocessing.image import load_img
 from keras.preprocessing.image import img_to_array
-
+import pandas as pd
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 from keras import layers, models
@@ -12,11 +12,6 @@ from keras.optimizers import Adam
 from tensorflow.python.client import device_lib
 print(device_lib.list_local_devices())
 
-#os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" 
-#config = tf.ConfigProto()
-#config.gpu_options.per_process_gpu_memory_fraction = 0.95
-#config.gpu_options.visible_device_list = "1" 
-#set_session(tf.Session(config=config))   
 
 dir_data = "data/pokeData/"
 Ntrain = 745
@@ -49,8 +44,6 @@ for count in range(1,nplot):
     ax.imshow(training_data[count])
 plt.show()
 
-## optimizer
-#optimizer = Adam(0.0002, 0.5)
 optimizer = Adam(0.00007, 0.5)
 
 def build_generator_gan(img_shape, noise_shape = (100,)):
@@ -58,7 +51,6 @@ def build_generator_gan(img_shape, noise_shape = (100,)):
     noise_shape : the dimension of the input vector for the generator_gan
     img_shape   : the dimension of the output
     '''
-    ## latent variable as input
     input_noise = layers.Input(shape=noise_shape) 
     d = layers.Dense(1024, activation="relu")(input_noise) 
     d = layers.Dense(1024, activation="relu")(input_noise) 
@@ -80,7 +72,6 @@ def build_generator_gan(img_shape, noise_shape = (100,)):
     model.summary() 
     return(model)
 
-## Set the dimension of latent variables to be 100
 noise_shape = (100,)
 
 generator_gan = build_generator_gan(img_shape, noise_shape = noise_shape)
@@ -146,10 +137,9 @@ discriminator.summary()
 z = layers.Input(shape=noise_shape)
 img = generator_gan(z)
 
-# For the combined model we will only train the generator_gan
+
 discriminator.trainable = False
 
-# The valid takes generated images as input and determines validity
 valid = discriminator(img)
 
 
@@ -159,7 +149,7 @@ combined.summary()
 
 def train(models, training_data, noise_plot, dir_result="/result/", epochs=20000, batch_size=100):
         '''
-        models     : tuple containins three tensors, (combined, discriminator, generator_gan)
+        models     : containins three tensors, (combined, discriminator, generator_gan)
         training_data    : np.array containing images (Nsample, height, width, Nchannels)
         noise_plot : np.array of size (Nrandom_sample_to_plot, hidden unit length)
         dir_result : the location where the generated plots for noise_plot are saved 
@@ -170,6 +160,8 @@ def train(models, training_data, noise_plot, dir_result="/result/", epochs=20000
         half_batch  = int(batch_size / 2)
         history = []
         for epoch in range(epochs):
+            
+            
 
 
             # Select a random half batch of images
@@ -182,21 +174,21 @@ def train(models, training_data, noise_plot, dir_result="/result/", epochs=20000
 
             
             # Train the discriminator
-            d_loss_real = discriminator.train_on_batch(imgs, np.ones((half_batch, 1)))
-            d_loss_fake = discriminator.train_on_batch(gen_imgs, np.zeros((half_batch, 1)))
-            d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
+            discriminator_loss_real = discriminator.train_on_batch(imgs, np.ones((half_batch, 1)))
+            discriminator_loss_fake = discriminator.train_on_batch(gen_imgs, np.zeros((half_batch, 1)))
+            discriminator_loss = 0.5 * np.add(discriminator_loss_real, discriminator_loss_fake)
 
 
             noise = get_noise(batch_size, nlatent_dim)
 
-            # The generator_gan wants the discriminator to label the generated samples
+            # The generator wants the discriminator to label the generated samples
             # as valid (ones)
             valid_y = (np.array([1] * batch_size)).reshape(batch_size,1)
             
-            # Train the generator_gan
-            g_loss = combined.train_on_batch(noise, valid_y)
+            # Train the generator
+            generator_loss = combined.train_on_batch(noise, valid_y)
 
-            history.append({"D":d_loss[0],"G":g_loss})
+            history.append({"D":discriminator_loss[0],"G":generator_loss})
 
             print ("Epoch {:05.0f}".format(epoch))
 
@@ -204,8 +196,8 @@ def train(models, training_data, noise_plot, dir_result="/result/", epochs=20000
             if epoch % 100 == 0:
                 # Plot the progress
                 print ("Epoch {:05.0f} [D loss: {:4.3f}, acc.: {:05.1f}%] [G loss: {:4.3f}]".format(
-                    epoch, d_loss[0], 100*d_loss[1], g_loss))
-            if epoch % int(epochs/1000) == 0:
+                    epoch, discriminator_loss[0], 100*discriminator_loss[1], generator_loss))
+            if epoch % int(epochs/100) == 0:
                 plot_generated_images(noise_plot,
                                       path_save=dir_result+"/image_{:05.0f}.png".format(epoch),
                                       titleadd="Epoch {}".format(epoch))
@@ -215,7 +207,7 @@ def train(models, training_data, noise_plot, dir_result="/result/", epochs=20000
                         
         return(history)
 
-dir_result="./result_GAN13/"
+dir_result="./result_GAN18/"
 
 try:
     os.mkdir(dir_result)
@@ -226,8 +218,7 @@ start_time = time.time()
 
 _models = combined, discriminator, generator_gan          
 
-history = train(_models, training_data, noise, dir_result=dir_result,epochs=20000, batch_size=100)
+history = train(_models, training_data, noise, dir_result=dir_result,epochs=3000, batch_size=100)
 end_time = time.time()
 print("-"*10)
 print("Time took: {:4.2f} min".format((end_time - start_time)/60))
-
